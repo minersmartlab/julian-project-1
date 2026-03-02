@@ -219,37 +219,31 @@
       var MOVE_MS = 1500;
       var MAX_MISSES = 3;
       var audioCtx = null;
+      var yellBuffer = null;
+
+      function initAudio() {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          fetch("freesound_community-yell-stop-it-82603.mp3")
+            .then(function (res) { return res.arrayBuffer(); })
+            .then(function (buf) { return audioCtx.decodeAudioData(buf); })
+            .then(function (decoded) { yellBuffer = decoded; })
+            .catch(function () { yellBuffer = null; });
+        } catch (e) {}
+      }
 
       function playScream() {
         try {
-          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          var ctx = audioCtx;
-          var t = ctx.currentTime;
-          var osc1 = ctx.createOscillator();
-          var osc2 = ctx.createOscillator();
-          var gain = ctx.createGain();
-          osc1.type = "sawtooth";
-          osc2.type = "square";
-          osc1.frequency.setValueAtTime(880, t);
-          osc1.frequency.exponentialRampToValueAtTime(1200, t + 0.08);
-          osc1.frequency.exponentialRampToValueAtTime(950, t + 0.25);
-          osc1.frequency.exponentialRampToValueAtTime(600, t + 0.5);
-          osc2.frequency.setValueAtTime(1320, t);
-          osc2.frequency.exponentialRampToValueAtTime(1800, t + 0.06);
-          osc2.frequency.exponentialRampToValueAtTime(1100, t + 0.4);
-          gain.gain.setValueAtTime(0, t);
-          gain.gain.linearRampToValueAtTime(0.18, t + 0.03);
-          gain.gain.setValueAtTime(0.18, t + 0.2);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-          osc1.connect(gain);
-          osc2.connect(gain);
-          gain.connect(ctx.destination);
-          osc1.start(t);
-          osc1.stop(t + 0.55);
-          osc2.start(t);
-          osc2.stop(t + 0.45);
+          if (!audioCtx) initAudio();
+          if (!yellBuffer || !audioCtx) return;
+          var src = audioCtx.createBufferSource();
+          src.buffer = yellBuffer;
+          src.connect(audioCtx.destination);
+          src.start(0);
         } catch (e) {}
       }
+
+      initAudio();
 
       function rand(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
