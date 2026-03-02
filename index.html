@@ -183,7 +183,7 @@
 </head>
 <body>
   <h1>Tap Target</h1>
-  <p class="subtitle">Tap the purple circle — it yells when you hit it!</p>
+  <p class="subtitle">Tap the purple circle — it screams when you hit it!</p>
   <div class="stats">
     <div class="stat-row"><span>Score</span><span id="score">0</span></div>
     <div class="stat-row"><span>Time left</span><span id="timer">—</span></div>
@@ -195,7 +195,7 @@
   <p class="message start" id="message">Tap Start to play</p>
   <button class="btn" id="startBtn" type="button">Start game</button>
   <button class="btn secondary" id="againBtn" type="button" style="display: none;">Play again</button>
-  <p class="instructions">Tap the circle to score — it yells when pressed. Round is 90 seconds. The target moves every 1.5s. Miss three in a row and the round ends.</p>
+  <p class="instructions">Tap the circle to score — it screams when pressed. Round is 90 seconds. The target moves every 1.5s. Miss three in a row and the round ends.</p>
 
   <script>
     (function () {
@@ -220,25 +220,34 @@
       var MAX_MISSES = 3;
       var audioCtx = null;
 
-      function playYell() {
+      function playScream() {
         try {
           if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           var ctx = audioCtx;
           var t = ctx.currentTime;
-          var osc = ctx.createOscillator();
+          var osc1 = ctx.createOscillator();
+          var osc2 = ctx.createOscillator();
           var gain = ctx.createGain();
-          osc.type = "sawtooth";
-          osc.frequency.setValueAtTime(520, t);
-          osc.frequency.exponentialRampToValueAtTime(280, t + 0.12);
-          osc.frequency.exponentialRampToValueAtTime(180, t + 0.28);
+          osc1.type = "sawtooth";
+          osc2.type = "square";
+          osc1.frequency.setValueAtTime(880, t);
+          osc1.frequency.exponentialRampToValueAtTime(1200, t + 0.08);
+          osc1.frequency.exponentialRampToValueAtTime(950, t + 0.25);
+          osc1.frequency.exponentialRampToValueAtTime(600, t + 0.5);
+          osc2.frequency.setValueAtTime(1320, t);
+          osc2.frequency.exponentialRampToValueAtTime(1800, t + 0.06);
+          osc2.frequency.exponentialRampToValueAtTime(1100, t + 0.4);
           gain.gain.setValueAtTime(0, t);
-          gain.gain.linearRampToValueAtTime(0.2, t + 0.02);
-          gain.gain.setValueAtTime(0.2, t + 0.1);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-          osc.connect(gain);
+          gain.gain.linearRampToValueAtTime(0.18, t + 0.03);
+          gain.gain.setValueAtTime(0.18, t + 0.2);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+          osc1.connect(gain);
+          osc2.connect(gain);
           gain.connect(ctx.destination);
-          osc.start(t);
-          osc.stop(t + 0.35);
+          osc1.start(t);
+          osc1.stop(t + 0.55);
+          osc2.start(t);
+          osc2.stop(t + 0.45);
         } catch (e) {}
       }
 
@@ -319,11 +328,11 @@
       function onTargetTap(e) {
         e.preventDefault();
         if (!running) return;
-        playYell();
+        playScream();
         target.classList.add("hit");
         score++;
         missesInRow = 0;
-        setMessage("Yell! +1", "go");
+        setMessage("Scream! +1", "go");
         updateUI();
         if (moveId) clearTimeout(moveId);
         setTimeout(function () {
