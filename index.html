@@ -74,6 +74,11 @@
       justify-content: flex-start;
       padding: clamp(1rem, 4vw, 2rem);
       z-index: 10;
+      transition: justify-content 0.35s ease, padding 0.35s ease;
+    }
+    .overlay.playing {
+      justify-content: flex-end;
+      padding-bottom: clamp(1rem, 5vw, 2rem);
     }
     .overlay > * {
       pointer-events: auto;
@@ -147,11 +152,8 @@
       line-height: 1.4;
       color: #ddd6fe;
     }
-    .tap-zone {
-      position: fixed;
-      inset: 0;
-      z-index: 5;
-      cursor: pointer;
+    .overlay.playing .instructions {
+      margin-top: 0.5rem;
     }
   </style>
 </head>
@@ -161,8 +163,7 @@
       <div class="dot" id="dot" aria-label="Target"></div>
     </div>
   </div>
-  <div class="tap-zone" id="tapZone" style="display: none;"></div>
-  <div class="overlay">
+  <div class="overlay" id="overlay">
     <div class="stats">
       <div class="stat-row"><span>Score</span><span id="score">0</span></div>
       <div class="stat-row"><span>Time left</span><span id="timer">—</span></div>
@@ -178,7 +179,7 @@
     (function () {
       var dot = document.getElementById("dot");
       var world = document.getElementById("world");
-      var tapZone = document.getElementById("tapZone");
+      var overlayEl = document.getElementById("overlay");
       var scoreEl = document.getElementById("score");
       var timerEl = document.getElementById("timer");
       var highScoreEl = document.getElementById("highScore");
@@ -269,7 +270,7 @@
         if (animId) cancelAnimationFrame(animId);
         timerId = null;
         animId = null;
-        tapZone.style.display = "none";
+        overlayEl.classList.remove("playing");
         saveHighScore();
         startBtn.style.display = "none";
         againBtn.style.display = "block";
@@ -311,8 +312,9 @@
         animId = requestAnimationFrame(animate);
       }
 
-      function onTap(e) {
+      function onDotTap(e) {
         e.preventDefault();
+        e.stopPropagation();
         if (!running) return;
         if (dotZ >= HIT_Z_MIN && dotZ <= HIT_Z_MAX) {
           playOink();
@@ -329,10 +331,10 @@
         }
       }
 
-      tapZone.addEventListener("click", onTap);
-      tapZone.addEventListener("touchend", function (e) {
+      dot.addEventListener("click", onDotTap);
+      dot.addEventListener("touchend", function (e) {
         e.preventDefault();
-        onTap(e);
+        onDotTap(e);
       }, { passive: false });
 
       startBtn.addEventListener("click", function () {
@@ -342,7 +344,7 @@
         running = true;
         startBtn.style.display = "none";
         againBtn.style.display = "none";
-        tapZone.style.display = "block";
+        overlayEl.classList.add("playing");
         setMessage("Go! Tap the dot as it comes at you", "go");
         updateUI();
         spawnDot();
@@ -354,6 +356,7 @@
       againBtn.addEventListener("click", function () {
         againBtn.style.display = "none";
         startBtn.style.display = "block";
+        overlayEl.classList.remove("playing");
         setMessage("Tap Start — the dot comes at you from far away. Tap it!", "start");
         scoreEl.textContent = "0";
         timerEl.textContent = "—";
