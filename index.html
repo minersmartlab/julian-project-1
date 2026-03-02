@@ -196,6 +196,7 @@
       let player = { x: 80, y: canvas.height / 2 - 20, vy: 0 };
       let stars = [];
       let score = 0;
+      let hardnessLevel = 0;
       let starSpeed = BASE_STAR_SPEED;
       let starSpawnInterval = BASE_STAR_SPAWN_INTERVAL;
       let frameCount = 0;
@@ -203,6 +204,41 @@
       let musicOn = true;
       let audioCtx = null;
       let musicInterval = null;
+
+      function drawBatmanLogo() {
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const w = 200;
+        const h = 280;
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, w, h, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.25)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#0a0a0a';
+        ctx.translate(cx, cy);
+        ctx.scale(0.85, 0.85);
+        ctx.beginPath();
+        ctx.moveTo(0, -90);
+        ctx.lineTo(-50, 50);
+        ctx.lineTo(-25, 55);
+        ctx.lineTo(0, 20);
+        ctx.lineTo(25, 55);
+        ctx.lineTo(50, 50);
+        ctx.closePath();
+        ctx.moveTo(0, 25);
+        ctx.lineTo(-18, 75);
+        ctx.lineTo(0, 65);
+        ctx.lineTo(18, 75);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
 
       function drawBat(x, y) {
         ctx.save();
@@ -259,14 +295,25 @@
         ctx.restore();
       }
 
-      function spawnStar() {
-        const y = 80 + Math.random() * (canvas.height - 200);
-        stars.push({
-          x: canvas.width + STAR_RADIUS,
-          y: y,
-          r: STAR_RADIUS,
-          passed: false
-        });
+      function spawnStars() {
+        const count = 2 + Math.min(Math.floor(hardnessLevel / 4), 4);
+        const usedY = [];
+        for (let i = 0; i < count; i++) {
+          let y;
+          let tries = 0;
+          do {
+            y = 80 + Math.random() * (canvas.height - 200);
+            tries++;
+          } while (tries < 20 && usedY.some(uy => Math.abs(uy - y) < 70));
+          usedY.push(y);
+          const offset = i * 25 - (count * 12);
+          stars.push({
+            x: canvas.width + STAR_RADIUS + offset,
+            y: y,
+            r: STAR_RADIUS,
+            passed: false
+          });
+        }
       }
 
       function hitTest() {
@@ -288,6 +335,8 @@
 
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawBatmanLogo();
 
         ctx.strokeStyle = '#ffd700';
         ctx.lineWidth = 2;
@@ -311,7 +360,7 @@
         }
 
         frameCount++;
-        if (frameCount % starSpawnInterval === 0) spawnStar();
+        if (frameCount % starSpawnInterval === 0) spawnStars();
 
         for (let i = stars.length - 1; i >= 0; i--) {
           const s = stars[i];
@@ -319,9 +368,10 @@
           if (s.x + s.r < player.x && !s.passed) {
             s.passed = true;
             score++;
+            hardnessLevel += 3;
             scoreDisplay.textContent = score;
-            starSpeed = Math.min(BASE_STAR_SPEED + score * 0.35, 8);
-            starSpawnInterval = Math.max(BASE_STAR_SPAWN_INTERVAL - score * 5, 40);
+            starSpeed = Math.min(BASE_STAR_SPEED + hardnessLevel * 0.2, 9);
+            starSpawnInterval = Math.max(BASE_STAR_SPAWN_INTERVAL - hardnessLevel * 1.5, 35);
           }
           if (s.x + s.r < 0) stars.splice(i, 1);
         }
@@ -342,6 +392,7 @@
         player = { x: 80, y: canvas.height / 2 - 20, vy: 0 };
         stars = [];
         score = 0;
+        hardnessLevel = 0;
         starSpeed = BASE_STAR_SPEED;
         starSpawnInterval = BASE_STAR_SPAWN_INTERVAL;
         frameCount = 0;
