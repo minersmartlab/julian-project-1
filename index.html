@@ -169,7 +169,7 @@
     </div>
     <button id="music-toggle" style="display: none;">Sound: On</button>
   </div>
-  <audio id="bg-music" src="Batman Opening and Closing Theme 1966 - 1968 With Snippets.mp3" loop preload="auto"></audio>
+  <audio id="bg-music" loop preload="auto"></audio>
 
   <script>
     (function () {
@@ -184,6 +184,8 @@
       const restartBtn = document.getElementById('restart-btn');
       const musicToggle = document.getElementById('music-toggle');
       const bgMusic = document.getElementById('bg-music');
+      bgMusic.src = 'Batman%20Opening%20and%20Closing%20Theme%201966%20-%201968%20With%20Snippets.mp3';
+      bgMusic.load();
 
       const GRAVITY = 0.35;
       const FLAP_STRENGTH = -8;
@@ -204,6 +206,7 @@
       let frameCount = 0;
       let animationId = null;
       let musicOn = true;
+      let musicStarted = false;
 
       function drawBatmanLogo() {
         const cx = canvas.width / 2;
@@ -393,6 +396,7 @@
         stars = [];
         score = 0;
         hardnessLevel = 0;
+        musicStarted = false;
         starSpeed = BASE_STAR_SPEED;
         starSpawnInterval = BASE_STAR_SPAWN_INTERVAL;
         frameCount = 0;
@@ -421,6 +425,7 @@
         e.preventDefault();
         if (gameState === 'title') return;
         if (gameState === 'gameover') return;
+        if (gameState === 'playing' && musicOn && !musicStarted) startMusic();
         flap();
       }
 
@@ -447,16 +452,18 @@
 
       function startMusic() {
         if (!musicOn) return;
-        try {
-          bgMusic.currentTime = 0;
-          bgMusic.play();
-        } catch (err) {}
+        bgMusic.volume = 0.8;
+        bgMusic.currentTime = 0;
+        const p = bgMusic.play();
+        if (p && typeof p.then === 'function') {
+          p.then(function () { musicStarted = true; }).catch(function () {});
+        } else {
+          musicStarted = true;
+        }
       }
 
       function stopMusic() {
-        try {
-          bgMusic.pause();
-        } catch (err) {}
+        bgMusic.pause();
       }
 
       musicToggle.addEventListener('click', function () {
