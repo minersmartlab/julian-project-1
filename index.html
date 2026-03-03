@@ -155,7 +155,7 @@
   <div id="game-container">
     <div id="title-screen">
       <h1>Batman Flap</h1>
-      <p>Tap to fly. Avoid the stars.</p>
+      <p>Tap to fly. Avoid stars, lasers & bullets.</p>
       <button id="start-btn">Start</button>
     </div>
     <div id="canvas-wrap" style="display: none;">
@@ -198,7 +198,7 @@
 
       let gameState = 'title';
       let player = { x: 80, y: canvas.height / 2 - 20, vy: 0 };
-      let stars = [];
+      let obstacles = [];
       let score = 0;
       let hardnessLevel = 0;
       let starSpeed = BASE_STAR_SPEED;
@@ -336,10 +336,38 @@
         ctx.restore();
       }
 
-      function spawnStars() {
+      function drawLaserBeam(x, y, w, h) {
+        ctx.save();
+        const g = ctx.createLinearGradient(x, 0, x + w, 0);
+        g.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
+        g.addColorStop(0.5, '#ffd700');
+        g.addColorStop(1, 'rgba(255, 215, 0, 0.3)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+        ctx.restore();
+      }
+
+      function drawBullet(cx, cy, r) {
+        ctx.save();
+        ctx.fillStyle = '#ffd700';
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, r * 0.6, r, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function spawnObstacles() {
         const count = 1 + Math.min(Math.floor(hardnessLevel / 10), 1);
+        const types = ['star', 'laser', 'bullet'];
         const usedY = [];
         for (let i = 0; i < count; i++) {
+          const type = types[Math.floor(Math.random() * types.length)];
           let y;
           let tries = 0;
           do {
@@ -348,12 +376,16 @@
           } while (tries < 20 && usedY.some(uy => Math.abs(uy - y) < 90));
           usedY.push(y);
           const offset = count === 1 ? 0 : (i * 30 - 15);
-          stars.push({
-            x: canvas.width + STAR_RADIUS + offset,
-            y: y,
-            r: STAR_RADIUS,
-            passed: false
-          });
+          const baseX = canvas.width + STAR_RADIUS + offset;
+          if (type === 'star') {
+            obstacles.push({ type: 'star', x: baseX, y: y, r: STAR_RADIUS, passed: false });
+          } else if (type === 'laser') {
+            const beamW = 10;
+            const beamH = 60 + Math.random() * 80;
+            obstacles.push({ type: 'laser', x: baseX, y: y, w: beamW, h: beamH, passed: false });
+          } else {
+            obstacles.push({ type: 'bullet', x: baseX, y: y, r: STAR_RADIUS * 0.7, passed: false });
+          }
         }
       }
 
@@ -362,11 +394,19 @@
         const py = player.y + PLAYER_HEIGHT / 2;
         const hitRadius = 14;
 
-        for (const s of stars) {
-          const dx = px - s.x;
-          const dy = py - s.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < hitRadius + s.r) return true;
+        for (const o of obstacles) {
+          if (o.type === 'star' || o.type === 'bullet') {
+            const dx = px - o.x;
+            const dy = py - o.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < hitRadius + o.r) return true;
+          } else if (o.type === 'laser') {
+            const rx = o.x;
+            const ry = o.y;
+            const rw = o.w;
+            const rh = o.h;
+            if (px + hitRadius > rx && px - hitRadius < rx + rw && py + hitRadius > ry && py - hitRadius < ry + rh) return true;
+          }
         }
         return false;
       }
@@ -401,26 +441,32 @@
         }
 
         frameCount++;
-        if (frameCount % starSpawnInterval === 0) spawnStars();
+        const interval = Math.floor(starSpawnInterval);
+        if (interval > 0 && frameCount % interval === 0) spawnObstacles();
 
-        for (let i = stars.length - 1; i >= 0; i--) {
-          const s = stars[i];
-          s.x -= starSpeed;
-          if (s.x + s.r < player.x && !s.passed) {
-            s.passed = true;
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const o = obstacles[i];
+          o.x -= starSpeed;
+          const rightEdge = o.type === 'laser' ? o.x + o.w : o.x + o.r;
+          if (rightEdge < player.x && !o.passed) {
+            o.passed = true;
             score++;
             hardnessLevel += 3;
             scoreDisplay.textContent = score;
             starSpeed = Math.min(BASE_STAR_SPEED + hardnessLevel * 0.2, 9);
-            starSpawnInterval = Math.max(BASE_STAR_SPAWN_INTERVAL - hardnessLevel * 1.2, 55);
+            starSpawnInterval = Math.floor(Math.max(BASE_STAR_SPAWN_INTERVAL - hardnessLevel * 1.2, 55));
           }
-          if (s.x + s.r < 0) stars.splice(i, 1);
+          if (rightEdge < 0) obstacles.splice(i, 1);
         }
 
         drawBat(player.x, player.y);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.globalAlpha = 1;
-        for (const s of stars) drawStar(s.x, s.y, s.r);
+        for (const o of obstacles) {
+          if (o.type === 'star') drawStar(o.x, o.y, o.r);
+          else if (o.type === 'laser') drawLaserBeam(o.x, o.y, o.w, o.h);
+          else if (o.type === 'bullet') drawBullet(o.x, o.y, o.r);
+        }
 
         if (hitTest()) {
           gameOver();
@@ -433,7 +479,7 @@
       function startGame() {
         gameState = 'playing';
         player = { x: 80, y: canvas.height / 2 - 20, vy: 0 };
-        stars = [];
+        obstacles = [];
         score = 0;
         hardnessLevel = 0;
         musicStarted = false;
