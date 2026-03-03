@@ -169,6 +169,7 @@
     </div>
     <button id="music-toggle" style="display: none;">Sound: On</button>
   </div>
+  <audio id="bg-music" src="Batman Opening and Closing Theme 1966 - 1968 With Snippets.mp3" loop preload="auto"></audio>
 
   <script>
     (function () {
@@ -182,6 +183,7 @@
       const finalScoreEl = document.getElementById('final-score');
       const restartBtn = document.getElementById('restart-btn');
       const musicToggle = document.getElementById('music-toggle');
+      const bgMusic = document.getElementById('bg-music');
 
       const GRAVITY = 0.35;
       const FLAP_STRENGTH = -8;
@@ -202,8 +204,6 @@
       let frameCount = 0;
       let animationId = null;
       let musicOn = true;
-      let audioCtx = null;
-      let musicInterval = null;
 
       function drawBatmanLogo() {
         const cx = canvas.width / 2;
@@ -446,50 +446,17 @@
       });
 
       function startMusic() {
-        if (!musicOn || musicInterval) return;
+        if (!musicOn) return;
         try {
-          audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-          if (audioCtx.state === 'suspended') audioCtx.resume();
-
-          const playNote = (freq, startTime, duration, vol) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.frequency.value = freq;
-            osc.type = 'triangle';
-            gain.gain.setValueAtTime(vol || 0.12, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-            osc.start(startTime);
-            osc.stop(startTime + duration);
-          };
-
-          const riff = [
-            { f: 261.63, t: 0 },
-            { f: 329.63, t: 0.12 },
-            { f: 392, t: 0.24 },
-            { f: 349.23, t: 0.36 },
-            { f: 261.63, t: 0.5 },
-            { f: 293.66, t: 0.62 },
-            { f: 349.23, t: 0.74 },
-            { f: 392, t: 0.86 }
-          ];
-          const beat = () => {
-            if (gameState !== 'playing' && gameState !== 'gameover') return;
-            const t = audioCtx.currentTime;
-            riff.forEach((n) => playNote(n.f, t + n.t, 0.14, 0.14));
-          };
-
-          beat();
-          musicInterval = setInterval(beat, 1000);
+          bgMusic.currentTime = 0;
+          bgMusic.play();
         } catch (err) {}
       }
 
       function stopMusic() {
-        if (musicInterval) {
-          clearInterval(musicInterval);
-          musicInterval = null;
-        }
+        try {
+          bgMusic.pause();
+        } catch (err) {}
       }
 
       musicToggle.addEventListener('click', function () {
